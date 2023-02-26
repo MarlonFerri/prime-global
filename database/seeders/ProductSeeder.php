@@ -13,7 +13,7 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
-            DB::table('products')->insert([
+            DB::table('products')->insert([[
                 'id' => 1,
                 'name' => 'Adidas 1',
                 'category_id' => 1
@@ -37,6 +37,6 @@ class ProductSeeder extends Seeder
                 'id' => 6,
                 'name' => 'Necklace 3',
                 'category_id' => 2
-            ]);
+            ]]);
     }
 }

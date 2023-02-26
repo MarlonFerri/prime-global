@@ -13,7 +13,7 @@ class SizeSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('sizes')->insert([
+        DB::table('sizes')->insert([[
             'id' => 1,
             'name' => '38'
         ],[
@@ -31,6 +31,6 @@ class SizeSeeder extends Seeder
         ],[
             'id' => 6,
             'name' => '24cm',
-        ]);
+        ]]);
     }
 }

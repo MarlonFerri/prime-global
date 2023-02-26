@@ -13,7 +13,7 @@ class ProductSizeSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('product_size')->insert([
+        DB::table('product_size')->insert([[
             'product_id' => 1,
             'size_id' => 1
         ],[
@@ -31,6 +31,6 @@ class ProductSizeSeeder extends Seeder
         ],[
             'product_id' => 4,
             'size_id' => 6
-        ]);
+        ]]);
     }
 }

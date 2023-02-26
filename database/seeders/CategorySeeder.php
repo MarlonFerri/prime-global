@@ -13,7 +13,7 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('categories')->insert([
+        DB::table('categories')->insert([[
             'id' => 1,
             'name' => 'Shoes',
             'grouping' => true
@@ -21,6 +21,6 @@ class CategorySeeder extends Seeder
             'id' => 2,
             'name' => 'Jewelry',
             'grouping' => false
-        ]);
+        ]]);
     }
 }
