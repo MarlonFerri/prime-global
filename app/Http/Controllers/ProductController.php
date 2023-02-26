@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 class ProductController extends Controller
 {
     /**
-     * This function 
+     * Store price entry point, will check price and add if has none
      *
      * @param Request $request
      * @return JsonResponse
@@ -24,7 +24,8 @@ class ProductController extends Controller
         $size = Size::where('name', $request->size)->first();
 
         $price = $request->price;
-        $currency = $request->enum('currency', CurrencyEnum::class);
+        // $currency = $request->enum('currency', CurrencyEnum::class);
+        $currency = $request->currency;
 
         try {
             if ($this->hasPrice($product, $size))
@@ -34,13 +35,21 @@ class ProductController extends Controller
             $this->forceSize($product, $size);
             $this->addPrice($product, $size, $price, $currency);
 
-            response()->json(['Price updated.']);
+            return response()->json(['Price updated.']);
         } catch (\Throwable $th) {
             // Here goes logic to log this error or something like it;
             return response()->json(['Un error occur. Please contact the admin.'], 500);
         }
     }
 
+    /**
+     * Check if the product already has a price.
+     * If the product has a category with grouping, it will check all available sizes.
+     *
+     * @param Product $product
+     * @param Size $size
+     * @return boolean
+     */
     public function hasPrice(Product $product, Size $size): bool
     {
         $list = [];
@@ -48,13 +57,22 @@ class ProductController extends Controller
         if ($product->isGroupingPrice())
             $list = $product->sizes()->wherePivotNotNull('price')->get();
         else 
-            $list = $product->sizes()->wherePivotNotNull('price')->where('size.id', $size->id);
+            $list = $product->sizes()->wherePivotNotNull('price')->where('sizes.id', $size->id)->get();
 
         return count($list);
         
     }
 
-    public function addPrice(Product $product, Size $size, float $price, CurrencyEnum $currency)
+    /**
+     * Add the price in pivot table for a single row or all sizes available based on category
+     *
+     * @param Product $product
+     * @param Size $size
+     * @param float $price
+     * @param string $currency
+     * @return void
+     */
+    public function addPrice(Product $product, Size $size, float $price, string $currency)
     {
         $newPriceCurrency = ['price' => $price, 'currency' => $currency];
         if ($product->isGroupingPrice())
@@ -63,9 +81,15 @@ class ProductController extends Controller
             $product->sizes()->updateExistingPivot($size->id, $newPriceCurrency);
     }
 
- 
+    /**
+     * Attach the size for product if not attached before.
+     *
+     * @param Product $product
+     * @param Size $size
+     * @return void
+     */
     public function forceSize(Product $product, Size $size)
     {
-        return $product->sizes()->attach($size->id);
+        return $product->sizes()->syncWithoutDetaching($size->id);
     }
 }
