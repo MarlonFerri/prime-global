@@ -29,7 +29,7 @@ Inside the container run the seeds to populate the database:
 ``php artisan db:seed``
 
 ## Requesting
-Use the route ``prime.test/api/price`` as target for tests.
+Use the route ``prime.test/api/price`` as target for tests with a ``patch`` verb.
 The route is waiting for a xhr request with the following fields:
 - ``price``: that should contain the price;
 - ``currency``: the currency string ('EUR' or 'DOL');
