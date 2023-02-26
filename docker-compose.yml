@@ -1,0 +1,82 @@
+version: '3'
+services:
+    # APP
+    prime_app:
+        container_name: prime_app
+        build:
+            context: .
+            dockerfile: docker/Dockerfile.server
+        image: prime/server
+        restart: unless-stopped
+        tty: true
+        platform: ${DOCKER_PLATFORM}
+        user: ${DOCKER_HOST_USER_ID}:${DOCKER_HOST_GROUP_ID}
+        environment:
+            CONTAINER_ROLE: 'APP'
+            DB_MYSQL_HOST: prime_db
+            PATH: "/usr/local/lib/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            HOME: "/var/www"
+        ports:
+            - 8001:8000
+        volumes:
+            - .:/var/www
+            - ./docker/php/memory-limit.ini:/usr/local/etc/php/conf.d/memory-limit.ini
+        networks:
+            - sync-network
+        cpus: 2
+        mem_limit: 4g
+
+    prime_db:
+        image: mysql:latest
+        restart: unless-stopped
+        container_name: prime_db
+        command: --performance-schema --secure-file-priv="/prime_data"
+        cpus: 5
+        mem_limit: 5g
+        user: mysql
+        security_opt:
+            - seccomp:unconfined
+        tty: true
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_DATABASE: ${DB_DATABASE}
+        ports:
+            - 3306:3306
+        volumes:
+            - prime_db:/var/lib/mysql
+            - prime_data:/prime_data:rw
+        networks:
+            - sync-network
+        extra_hosts:
+            - prime.test:172.18.0.50
+
+    nginx:
+        container_name: nginx
+        image: nginx:1.20.2-alpine
+        restart: unless-stopped
+        networks:
+            - sync-network
+        volumes:
+            - ./docker/nginx/prime.conf:/etc/nginx/nginx.conf:ro
+        ports:
+            - 80:80
+    prime_composer:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile.composer
+        image: prime/composer
+        command: ${COMMAND}
+        platform: ${DOCKER_PLATFORM}
+        user: ${DOCKER_HOST_USER_ID}:${DOCKER_HOST_GROUP_ID}
+        working_dir: /app
+        volumes:
+            - .:/app
+volumes:
+    prime_db:
+        driver: local
+    prime_data:
+        external: true
+networks:
+    sync-network:
+        name: sync-network
+        driver: bridge

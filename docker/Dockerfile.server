@@ -1,0 +1,79 @@
+FROM php:8.1.11-fpm
+
+# Copy composer.lock and composer.json
+COPY ./composer.lock ./composer.json /var/www/
+
+# Default PHP configurations
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# Set working directory
+WORKDIR /var/www
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    locales \
+    zip \
+    jpegoptim optipng pngquant gifsicle \
+    vim \
+    unzip \
+    git \
+    curl \
+    libzip-dev \
+    default-mysql-client \
+    iputils-ping \
+    libxml2-dev
+
+ENV ACCEPT_EULA=Y
+# Microsoft SQL Server Prerequisites
+RUN apt-get install -y unixodbc unixodbc-dev gnupg libonig-dev \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/9/prod.list \
+        > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get install -y --no-install-recommends \
+        locales \
+        apt-transport-https \
+    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
+    && locale-gen \
+    && apt-get update \
+    && apt-get -y --no-install-recommends install \
+        msodbcsql17
+# Apply the extensions that was installed previously
+RUN docker-php-ext-install mbstring pdo soap \
+    && pecl install sqlsrv pdo_sqlsrv xdebug \
+    && docker-php-ext-enable sqlsrv pdo_sqlsrv xdebug
+
+RUN docker-php-ext-configure intl && docker-php-ext-install intl calendar
+
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Redis Client
+RUN pecl install -o -f redis \
+&&  rm -rf /tmp/pear \
+&&  docker-php-ext-enable redis
+
+# Install extensions
+RUN docker-php-ext-install pdo_mysql zip pcntl
+
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install node 16.17.1 version
+RUN curl -o /root/node-v14.17.0-linux-x64.tar.xz https://nodejs.org/dist/v14.17.0/node-v14.17.0-linux-x64.tar.xz \
+&& tar -xf /root/node-v14.17.0-linux-x64.tar.xz -C /root\
+&& ls /root \
+&& mkdir /usr/local/lib/node \
+&& mv /root/node-v14.17.0-linux-x64/* /usr/local/lib/node
+
+COPY docker/start.sh /usr/local/bin/start
+
+# Create folder to store data that is syncing through package and give permission to execute the start bash scripting file
+RUN mkdir /prime_data && chmod 0777 /prime_data && chmod a+x /usr/local/bin/start
+
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+CMD ["/usr/local/bin/start"]
